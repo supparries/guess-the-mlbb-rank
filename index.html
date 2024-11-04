@@ -1,1 +1,229 @@
-Hai!
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLBB Guess Rank</title>
+    
+    <!-- Link Google Fonts untuk Line Seed -->
+    <link href="https://fonts.googleapis.com/css2?family=Line+Seed&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Styling Umum */
+        body {
+            font-family: 'Line Seed', sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #fff;
+        }
+
+        h1 {
+            background-color: #222;
+            color: #fff;
+            padding: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            max-width: 560px;
+            margin: 0 auto;
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .rank-options {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .rank-options img {
+            width: 50px;
+            height: 50px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 1.2rem; padding: 0.8rem; }
+            .rank-options img { width: 40px; height: 40px; }
+            .video-container { margin: 0.5rem 0; }
+            .score { font-size: 1rem; margin: 0.5rem 0; }
+        }
+
+        .score {
+            font-size: 1.2rem;
+            margin: 1rem 0;
+        }
+
+        footer {
+            font-size: 0.8rem;
+            color: #555;
+            margin: 1rem 0;
+        }
+
+        .submit-icon {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 30px;
+            cursor: pointer;
+        }
+
+        .popup {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .popup-content {
+            background: #333;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .popup button {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>MLBB Guess Rank</h1>
+
+    <div class="video-container">
+        <iframe id="video" frameborder="0" allowfullscreen></iframe>
+    </div>
+
+    <div class="rank-options">
+        <img src="icons/warrior.png" alt="Warrior" onclick="checkGuess('Warrior')">
+        <img src="icons/elite.png" alt="Elite" onclick="checkGuess('Elite')">
+        <img src="icons/master.png" alt="Master" onclick="checkGuess('Master')">
+        <img src="icons/grandmaster.png" alt="Grandmaster" onclick="checkGuess('Grandmaster')">
+        <img src="icons/epic.png" alt="Epic" onclick="checkGuess('Epic')">
+        <img src="icons/legend.png" alt="Legend" onclick="checkGuess('Legend')">
+        <img src="icons/mythic.png" alt="Mythic" onclick="checkGuess('Mythic')">
+        <img src="icons/mythical-honor.png" alt="Mythical Honor" onclick="checkGuess('Mythical Honor')">
+        <img src="icons/mythical-glory.png" alt="Mythical Glory" onclick="checkGuess('Mythical Glory')">
+        <img src="icons/mythical-immortal.png" alt="Mythical Immortal" onclick="checkGuess('Mythical Immortal')">
+    </div>
+
+    <div class="score">Score: <span id="score">0</span></div>
+
+    <footer>MLBB Guess Rank &copy; 2024</footer>
+    
+    <a href="https://forms.google.com" target="_blank">
+        <img class="submit-icon" src="icons/submit.png" alt="Submit Video">
+    </a>
+
+    <div id="popup" class="popup">
+        <div class="popup-content">
+            <p id="resultMessage"></p>
+            <p>Correct rank: <img id="correctRankIcon" src="" alt="Correct Rank"></p>
+            <button onclick="nextVideo()">Next</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let currentRank;
+        let videoData = [];
+        let remainingVideos = [];
+
+        async function fetchVideoData() {
+            const response = await fetch("https://docs.google.com/spreadsheets/d/1BbWQXV8zuYu29s_YHp5iwGQeOzw5KnzsfQFyyKD5h-E/export?format=csv");
+            const data = await response.text();
+            const rows = data.split('\n').slice(1);
+            
+            videoData = rows.map(row => {
+                const [rank, videoURL] = row.split(',');
+                return { rank: rank.trim(), videoURL: videoURL.trim() };
+            });
+            
+            remainingVideos = [...videoData];
+            selectRandomVideo();
+        }
+
+        function normalizeRank(rank) {
+            return rank.toLowerCase().replace(/[^a-z0-9]/g, ""); 
+        }
+
+        function selectRandomVideo() {
+            if (remainingVideos.length === 0) {
+                remainingVideos = [...videoData];
+            }
+
+            const randomIndex = Math.floor(Math.random() * remainingVideos.length);
+            const selectedVideo = remainingVideos.splice(randomIndex, 1)[0];
+
+            currentRank = selectedVideo.rank;
+            const videoElement = document.getElementById("video");
+            videoElement.src = ""; 
+
+            const videoId = extractVideoID(selectedVideo.videoURL);
+            if (videoId) {
+                videoElement.src = `https://www.youtube.com/embed/${videoId}`;
+            } else {
+                console.error("Invalid video URL:", selectedVideo.videoURL);
+                alert("Failed to load video. Invalid URL.");
+            }
+        }
+
+        function extractVideoID(url) {
+            const shortUrlPattern = /youtu\.be\/([a-zA-Z0-9_-]+)/;
+            const longUrlPattern = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]+)/;
+
+            const shortMatch = url.match(shortUrlPattern);
+            const longMatch = url.match(longUrlPattern);
+
+            return shortMatch ? shortMatch[1] : longMatch ? longMatch[1] : null;
+        }
+
+        function checkGuess(guessRank) {
+            const popup = document.getElementById("popup");
+            const resultMessage = document.getElementById("resultMessage");
+            const correctRankIcon = document.getElementById("correctRankIcon");
+
+            if (normalizeRank(guessRank) === normalizeRank(currentRank)) {
+                score++;
+                resultMessage.textContent = "Correct!";
+            } else {
+                resultMessage.textContent = "Wrong!";
+            }
+            
+            document.getElementById("score").textContent = score;
+            correctRankIcon.src = `icons/${normalizeRank(currentRank)}.png`;
+            popup.style.display = "flex";
+        }
+
+        function nextVideo() {
+            selectRandomVideo();
+            document.getElementById("popup").style.display = "none";
+        }
+
+        fetchVideoData();
+    </script>
+</body>
+</html>
